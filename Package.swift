@@ -19,10 +19,14 @@ let package = Package(
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
             ]
         ),
-        .target(name: "SwiftMapper", dependencies: ["SwiftMapperMacros"]),
+        .target(
+            name: "SwiftMapper",
+            dependencies: ["SwiftMapperMacros"]
+        ),
+        
         .executableTarget(
-                    name: "SwiftMapperClient",
-                    dependencies: ["SwiftMapper"]
-                ),
+            name: "SwiftMapperClient",
+            dependencies: ["SwiftMapper"]
+        ),
     ]
 )
