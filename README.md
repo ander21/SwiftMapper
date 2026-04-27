@@ -49,7 +49,7 @@ import SwiftMapper
 struct UserDTO: Codable {
     var id: UUID
     var name: String
-    //@MapIgnore - ignores property, @MapIgnore(for: [UserEntity.self])
+    //@MapIgnore - ignores property, @MapIgnore(for: [UserEntity.self]) - ignores property for target class/structure
     @MapIgnore var password: String
 }
 
