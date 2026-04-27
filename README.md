@@ -1,28 +1,29 @@
-SwiftMapper 🚀
-SwiftMapper is a lightweight, compile-time mapping library powered by Swift Macros. It eliminates the boilerplate of writing manual initializers for DTOs, Domain Models, and Database Entities.
+# SwiftMapper 🚀
 
-Unlike traditional mappers, SwiftMapper analyzes your code at compile-time, providing zero runtime overhead and immediate feedback on type mismatches.
+**SwiftMapper** is a lightweight, compile-time mapping library powered by **Swift Macros**. It eliminates the boilerplate of writing manual initializers for **DTOs**, **Domain Models**, and **Database Entities**.
 
-📦 Installation
-Add SwiftMapper to your project using Swift Package Manager:
+Unlike traditional mappers, SwiftMapper analyzes your code at compile-time, providing **zero runtime overhead** and **immediate feedback** on type mismatches.
 
-In Xcode, go to File > Add Package Dependencies...
+## 📦 Installation
 
-Paste the repository URL: https://github.com/YOUR_USERNAME/SwiftMapper.git
+Add SwiftMapper to your project using **Swift Package Manager**:
 
-Select Dependency Rule: Up to Next Major Version.
+1. In Xcode, go to **File > Add Package Dependencies...**
+2. Paste the repository URL: `https://github.com/ander21/SwiftMapper.git`
+3. Select **Dependency Rule**: `Up to Next Major Version`.
 
-Alternatively, add it to your Package.swift:
+Alternatively, add it to your `Package.swift`:
 
-Swift
+```swift
 dependencies: [
-    .package(url: "https://github.com/YOUR_USERNAME/SwiftMapper.git", from: "1.0.0")
+    .package(url: "[https://github.com/ander21/SwiftMapper.git](https://github.com/ander21/SwiftMapper.git)", from: "1.0.0")
 ]
-🚀 Usage
-Basic Mapping
-Annotate your models with @Mappable and specify the source types.
+```
 
-Swift
+## 🚀 Usage
+#Basic Mapping Annotate your models with @Mappable and specify the source types.
+
+```swift
 import SwiftMapper
 
 struct UserDTO: Codable {
@@ -38,28 +39,4 @@ struct User {
 
 // SwiftMapper automatically generates:
 // let user = User(from: dto)
-Nested & Optional Mapping
-SwiftMapper recursively maps nested objects and arrays. It also handles optional mismatches by providing smart defaults for primitives.
-
-Swift
-@Mappable(targets: [TaskDTO.self])
-struct Task {
-    var title: String
-}
-
-@Mappable(targets: [UserDTO.self])
-struct UserDomain {
-    var name: String      // Target non-optional, source optional? Generates: ?? ""
-    var tasks: [Task]?    // Maps array: source.tasks?.map { Task(from: $0) }
-}
-🛠 Attributes
-@Mappable(targets: [...]): Generates init(from:) for each target.
-
-@MapKey("source_field"): Maps a property to a differently named field in the source.
-
-@MapIgnore: Excludes a property from being mapped.
-
-⚠️ Requirements
-Swift 5.9+ (Xcode 15+)
-
-iOS 13+ / macOS 10.15+
+```
