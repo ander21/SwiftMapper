@@ -21,22 +21,46 @@ dependencies: [
 ```
 
 ## 🚀 Usage
-#Basic Mapping Annotate your models with @Mappable and specify the source types.
+
+Basic Mapping Annotate your models with @Mappable and specify the source types.
 
 ```swift
 import SwiftMapper
 
 struct UserDTO: Codable {
     var id: UUID
-    var api_name: String
+    var name: String
 }
 
 @Mappable(targets: [UserDTO.self])
 struct User {
     var id: UUID
-    @MapKey("api_name") var name: String
+    var name: String
 }
 
 // SwiftMapper automatically generates:
 // let user = User(from: dto)
+```
+With classes:
+```swift
+import SwiftMapper
+
+@Mappable(targets: [UserEntity.self])
+struct UserDTO: Codable {
+    var id: UUID
+    var name: String
+    //@MapIgnore - ignores property, @MapIgnore(for: [UserEntity.self])
+    @MapIgnore var password: String
+}
+
+@Mappable(targets: [UserDTO.self])
+class UserEntity {
+    var id: UUID = UUID()
+    var name: String = ""
+
+    // Required for classes (Macros adds convenience init(from: .Type) {
+    //    self.init()
+    // })
+    init() {}
+}
 ```
