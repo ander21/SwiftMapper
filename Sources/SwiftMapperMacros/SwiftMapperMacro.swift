@@ -15,7 +15,7 @@ public struct MappableMacro: MemberMacro {
 
         return targetTypeNames.map { targetName in
             let body = properties.compactMap { prop in
-                generateAssignment(for: prop)
+                generateAssignment(for: prop, targetName: targetName)
             }.joined(separator: "\n        ")
 
             let isClass = declaration.is(ClassDeclSyntax.self)
@@ -30,46 +30,41 @@ public struct MappableMacro: MemberMacro {
         }
     }
 
-    private static func generateAssignment(for prop: PropertyInfo) -> String? {
-        if prop.isIgnored { return nil }
+    private static func generateAssignment(for prop: PropertyInfo, targetName: String) -> String? {
+        if prop.isIgnored {
+            if prop.ignoredFor.isEmpty || prop.ignoredFor.contains(targetName) {
+                return nil
+            }
+        }
         
         let sourceField = prop.customKey ?? prop.name
         let baseType = getBaseType(prop.type)
         let isBasePrimitive = isPrimitive(baseType)
 
-        // 1. ОБРОБКА МАСИВІВ
         if prop.isArray {
             if isBasePrimitive {
-                // Якщо ціль [String], а джерело [String]?, додаємо ?? []
                 let fallback = prop.isOptional ? "" : " ?? []"
                 return "self.\(prop.name) = source.\(sourceField)\(fallback)"
             } else {
-                // Складні масиви: [Type].map { ... }
                 let optionalChaining = "?.map { \(baseType)(from: $0) }"
                 let fallback = prop.isOptional ? "" : " ?? []"
                 return "self.\(prop.name) = source.\(sourceField)\(optionalChaining)\(fallback)"
             }
         }
         
-        // 2. СКЛАДНІ ОБ'ЄКТИ (Nested)
         if !isBasePrimitive {
             if prop.isOptional {
-                // Ціль: Test?, Джерело: Test? -> map
                 return "self.\(prop.name) = source.\(sourceField).map { \(baseType)(from: $0) }"
             } else {
-                // Ціль: Test (Non-Optional). Тут макрос НЕ додає ??,
-                // тому якщо в Source це Optional, виникне помилка компіляції (як ти і просив).
                 return "self.\(prop.name) = \(baseType)(from: source.\(sourceField))"
             }
         }
 
-        // 3. ПРИМІТИВИ (String, Int, Bool...)
+        // 3. Primitive (String, Int, Bool...)
         if !prop.isOptional {
-            // Якщо ціль Non-Optional, додаємо розумний дефолт
             let defaultVal = defaultValue(for: baseType)
             return "self.\(prop.name) = source.\(sourceField) ?? \(defaultVal)"
         } else {
-            // Якщо ціль Optional, просто копіюємо
             return "self.\(prop.name) = source.\(sourceField)"
         }
     }
@@ -82,7 +77,7 @@ public struct MappableMacro: MemberMacro {
         case "UUID": return "UUID()"
         case "Date": return "Date()"
         case "Data": return "Data()"
-        default: return "nil" // Це призведе до помилки компіляції, якщо тип не примітив
+        default: return "nil"
         }
     }
 
@@ -113,35 +108,47 @@ public struct MappableMacro: MemberMacro {
 
         var customKey: String?
         var isIgnored = false
+        var ignoredFor: [String] = []
 
         for attr in varDecl.attributes {
             if let attrSyntax = attr.as(AttributeSyntax.self) {
                 let attrName = attrSyntax.attributeName.description.trimmingCharacters(in: .whitespaces)
-                if attrName == "MapIgnore" { isIgnored = true }
+                
                 if attrName == "MapKey", let arg = attrSyntax.arguments?.as(LabeledExprListSyntax.self)?.first {
                     customKey = arg.expression.description.replacingOccurrences(of: "\"", with: "")
+                }
+                
+                if attrName == "MapIgnore" {
+                    isIgnored = true
+                    if let args = attrSyntax.arguments?.as(LabeledExprListSyntax.self),
+                       let array = args.first?.expression.as(ArrayExprSyntax.self) {
+                        ignoredFor = array.elements.map {
+                            $0.expression.description
+                                .replacingOccurrences(of: ".self", with: "")
+                                .trimmingCharacters(in: .whitespaces)
+                        }
+                    }
                 }
             }
         }
 
         return PropertyInfo(
-            name: name,
-            type: type,
-            isOptional: type.hasSuffix("?"),
-            isArray: type.hasPrefix("["),
-            customKey: customKey,
-            isIgnored: isIgnored
+            name: name, type: type, isOptional: type.hasSuffix("?"),
+            isArray: type.hasPrefix("["), customKey: customKey,
+            isIgnored: isIgnored, ignoredFor: ignoredFor
         )
     }
 }
 
-// Потрібні публічні структури для MapIgnore та MapKey (як у попередніх кроках)
 public struct MapIgnoreMacro: PeerMacro { public static func expansion(of node: AttributeSyntax, providingPeersOf declaration: some DeclSyntaxProtocol, in context: some MacroExpansionContext) throws -> [DeclSyntax] { [] } }
 public struct MapKeyMacro: PeerMacro { public static func expansion(of node: AttributeSyntax, providingPeersOf declaration: some DeclSyntaxProtocol, in context: some MacroExpansionContext) throws -> [DeclSyntax] { [] } }
 
 struct PropertyInfo {
-    let name, type: String
-    let isOptional, isArray: Bool
+    let name: String
+    let type: String
+    let isOptional: Bool
+    let isArray: Bool
     let customKey: String?
     let isIgnored: Bool
+    let ignoredFor: [String]
 }
