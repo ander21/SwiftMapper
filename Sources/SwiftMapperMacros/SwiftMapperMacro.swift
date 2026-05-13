@@ -40,32 +40,44 @@ public struct MappableMacro: MemberMacro {
         let sourceField = prop.customKey ?? prop.name
         let baseType = getBaseType(prop.type)
         let isBasePrimitive = isPrimitive(baseType)
-
+        
+        // Універсальний трюк: безпечно нормалізує як `T`, так і `T?` від source у `T?`.
+        // Це дозволяє застосовувати optional chaining (`?.` або `.map`) без помилок компіляції.
+        let normalizedSource = "Optional.some(source.\(sourceField)).flatMap { $0 }"
+        
         if prop.isArray {
             if isBasePrimitive {
-                let fallback = prop.isOptional ? "" : " ?? []"
-                return "self.\(prop.name) = source.\(sourceField)\(fallback)"
+                if prop.isOptional {
+                    return "self.\(prop.name) = \(normalizedSource)"
+                } else {
+                    return "self.\(prop.name) = \(normalizedSource) ?? []"
+                }
             } else {
-                let optionalChaining = "?.map { \(baseType)(from: $0) }"
-                let fallback = prop.isOptional ? "" : " ?? []"
-                return "self.\(prop.name) = source.\(sourceField)\(optionalChaining)\(fallback)"
+                // Для масивів кастомних об'єктів
+                if prop.isOptional {
+                    return "self.\(prop.name) = \(normalizedSource)?.map { \(baseType)(from: $0) }"
+                } else {
+                    return "self.\(prop.name) = \(normalizedSource)?.map { \(baseType)(from: $0) } ?? []"
+                }
             }
         }
         
         if !isBasePrimitive {
             if prop.isOptional {
-                return "self.\(prop.name) = source.\(sourceField).map { \(baseType)(from: $0) }"
+                return "self.\(prop.name) = \(normalizedSource).map { \(baseType)(from: $0) }"
             } else {
-                return "self.\(prop.name) = \(baseType)(from: source.\(sourceField))"
+                // Якщо властивість неопціональна, але source може повернути nil,
+                // підставляємо порожній об'єкт (вимагає наявності порожнього init() у BaseType)
+                return "self.\(prop.name) = \(normalizedSource).map { \(baseType)(from: $0) } ?? \(baseType)()"
             }
         }
-
-        // 3. Primitive (String, Int, Bool...)
-        if !prop.isOptional {
-            let defaultVal = defaultValue(for: baseType)
-            return "self.\(prop.name) = source.\(sourceField) ?? \(defaultVal)"
+        
+        // Для примітивів (String, Int, Bool...)
+        if prop.isOptional {
+            return "self.\(prop.name) = \(normalizedSource)"
         } else {
-            return "self.\(prop.name) = source.\(sourceField)"
+            let defaultVal = defaultValue(for: baseType)
+            return "self.\(prop.name) = \(normalizedSource) ?? \(defaultVal)"
         }
     }
 
