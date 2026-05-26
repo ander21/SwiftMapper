@@ -85,6 +85,7 @@ public struct MappableMacro: MemberMacro {
         switch type {
         case "String": return "\"\""
         case "Int", "Double", "Float": return "0"
+        case "Decimal": return "Decimal.zero"
         case "Bool": return "false"
         case "UUID": return "UUID()"
         case "Date": return "Date()"
@@ -94,9 +95,9 @@ public struct MappableMacro: MemberMacro {
     }
 
     private static func isPrimitive(_ type: String) -> Bool {
-        let primitives = ["String", "Int", "Double", "Float", "Bool", "UUID", "Date", "Data"]
-        return primitives.contains(type)
-    }
+            let primitives = ["String", "Int", "Double", "Float", "Bool", "UUID", "Date", "Data", "Decimal"]
+            return primitives.contains(type)
+        }
 
     private static func getBaseType(_ type: String) -> String {
         return type
